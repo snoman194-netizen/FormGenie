@@ -159,14 +159,16 @@ const SearchTab: React.FC<SearchTabProps> = ({ onTransfer }) => {
       {/* Search Results */}
       {results && (
         <div className="space-y-8 animate-in fade-in duration-700">
-          <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
+          <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
             <h3 className="text-xl font-black text-gray-900 mb-4 flex items-center">
               <Info size={20} className="mr-2 text-indigo-600" /> Analysis & Overview
             </h3>
-            <div className="prose prose-indigo max-w-none text-gray-600 leading-relaxed font-medium">
-              {results.text.split('\n').map((para, i) => (
-                <p key={i} className="mb-4">{para}</p>
-              ))}
+            <div className="max-h-[320px] overflow-y-auto pr-2 custom-scrollbar scroll-smooth">
+              <div className="prose prose-indigo max-w-none text-gray-600 leading-relaxed font-medium">
+                {results.text.split('\n').map((para, i) => (
+                  <p key={i} className="mb-4">{para}</p>
+                ))}
+              </div>
             </div>
           </div>
 
