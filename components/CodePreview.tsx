@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Copy, Check, Download, ExternalLink, X } from 'lucide-react';
+import { Copy, Check, Download, ExternalLink, X, Cloud, Loader2 } from 'lucide-react';
 import { FormStructure } from '../types';
+import { saveFileToDrive } from '../services/googleDrive';
 
 interface CodePreviewProps {
   form: FormStructure;
@@ -10,6 +11,8 @@ interface CodePreviewProps {
 
 const CodePreview: React.FC<CodePreviewProps> = ({ form, onClose }) => {
   const [copied, setCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const generateAppsScript = () => {
     const jsonStr = JSON.stringify(form, null, 2);
@@ -66,49 +69,84 @@ function createGoogleForm() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleSaveToDrive = async () => {
+    setIsSaving(true);
+    try {
+      const fileName = `${form.title.replace(/\s+/g, '_')}_Creator_Script.gs`;
+      await saveFileToDrive(fileName, generateAppsScript(), 'text/plain');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to save to Drive. Ensure Client ID is configured and you have granted permissions.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-gray-200">
-        <div className="p-6 border-b flex items-center justify-between bg-gray-50">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+      <div className="bg-white rounded-[32px] w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-gray-100 scale-in duration-300">
+        <div className="p-8 border-b flex items-center justify-between bg-white">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Final Step: Generate Form</h2>
-            <p className="text-sm text-gray-500">Copy the code below into Google Apps Script to create your form.</p>
+            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Generate Your Google Form</h2>
+            <p className="text-sm text-gray-500 mt-1 font-medium">Run this script in Google Apps Script to build your form automatically.</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400">
+          <button onClick={onClose} className="p-3 hover:bg-gray-100 rounded-full transition-all text-gray-400 hover:text-gray-900">
             <X size={24} />
           </button>
         </div>
 
-        <div className="flex-grow overflow-auto p-6 bg-gray-900">
-          <pre className="text-indigo-300 font-mono text-sm leading-relaxed">
+        <div className="flex-grow overflow-auto p-8 bg-[#0d1117]">
+          <pre className="text-indigo-300 font-mono text-xs md:text-sm leading-relaxed whitespace-pre">
             <code>{generateAppsScript()}</code>
           </pre>
         </div>
 
-        <div className="p-6 border-t bg-white flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-4 text-xs text-gray-500 uppercase tracking-widest font-medium">
-            <span className="flex items-center"><span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] mr-2">1</span> Copy Script</span>
-            <div className="w-8 h-px bg-gray-200" />
-            <span className="flex items-center"><span className="w-4 h-4 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] mr-2">2</span> Paste at script.google.com</span>
-            <div className="w-8 h-px bg-gray-200" />
-            <span className="flex items-center"><span className="w-4 h-4 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] mr-2">3</span> Click Run</span>
+        <div className="p-8 border-t bg-gray-50 flex flex-col space-y-6">
+          <div className="flex flex-wrap items-center gap-6 text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">
+            <span className="flex items-center"><span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center mr-2 shadow-sm shadow-indigo-200">1</span> Copy Script</span>
+            <div className="flex-grow h-px bg-gray-200" />
+            <span className="flex items-center"><span className="w-5 h-5 rounded-full bg-white border border-gray-200 text-gray-400 flex items-center justify-center mr-2">2</span> Open Apps Script</span>
+            <div className="flex-grow h-px bg-gray-200" />
+            <span className="flex items-center"><span className="w-5 h-5 rounded-full bg-white border border-gray-200 text-gray-400 flex items-center justify-center mr-2">3</span> Paste & Run</span>
           </div>
           
-          <div className="flex items-center space-x-3 w-full md:w-auto">
+          <div className="flex flex-col md:flex-row items-center gap-4">
             <button 
               onClick={copyToClipboard}
-              className="flex-grow md:flex-none flex items-center justify-center bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+              className="w-full md:flex-1 flex items-center justify-center bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group"
             >
-              {copied ? <Check size={18} className="mr-2" /> : <Copy size={18} className="mr-2" />}
-              {copied ? 'Copied!' : 'Copy Apps Script'}
+              {copied ? <Check size={20} className="mr-2" /> : <Copy size={20} className="mr-2 group-hover:scale-110 transition-transform" />}
+              {copied ? 'Successfully Copied!' : 'Copy Script to Clipboard'}
             </button>
+            
+            <button 
+              onClick={handleSaveToDrive}
+              disabled={isSaving}
+              className={`w-full md:flex-1 flex items-center justify-center px-8 py-4 rounded-2xl font-bold transition-all shadow-sm border-2 ${
+                saveSuccess 
+                  ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-200 hover:text-indigo-600'
+              }`}
+            >
+              {isSaving ? (
+                <Loader2 size={20} className="mr-2 animate-spin" />
+              ) : saveSuccess ? (
+                <Check size={20} className="mr-2" />
+              ) : (
+                <Cloud size={20} className="mr-2 text-blue-500" />
+              )}
+              {isSaving ? 'Saving...' : saveSuccess ? 'Saved to Drive' : 'Save Script to Drive'}
+            </button>
+
             <a 
               href="https://script.google.com" 
               target="_blank" 
               rel="noreferrer"
-              className="flex-grow md:flex-none flex items-center justify-center border-2 border-indigo-600 text-indigo-600 px-6 py-[10px] rounded-xl font-bold hover:bg-indigo-50 transition-all"
+              className="w-full md:w-auto flex items-center justify-center bg-white border-2 border-indigo-600 text-indigo-600 px-8 py-[14px] rounded-2xl font-bold hover:bg-indigo-50 transition-all"
             >
-              Open Apps Script <ExternalLink size={16} className="ml-2" />
+              Launch Editor <ExternalLink size={18} className="ml-2" />
             </a>
           </div>
         </div>

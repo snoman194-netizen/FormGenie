@@ -2,14 +2,12 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { FormStructure, QuestionType } from "../types";
 
-const API_KEY = process.env.API_KEY || '';
-
 export const convertFileToForm = async (
   fileData: string, 
   mimeType: string,
   fileName: string
 ): Promise<FormStructure> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   let prompt = "";
   let parts: any[] = [];
@@ -89,12 +87,71 @@ export const convertFileToForm = async (
   }
 };
 
+/**
+ * Refines an existing form structure using AI based on user instructions.
+ */
+export const refineFormWithAI = async (currentForm: FormStructure, instruction: string): Promise<FormStructure> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const prompt = `Refine the following Google Form structure based on this instruction: "${instruction}".
+  
+  Current Form:
+  ${JSON.stringify(currentForm, null, 2)}
+  
+  Instructions:
+  1. Modify the questions, titles, descriptions, or options as requested.
+  2. Ensure the output is a valid FormStructure.
+  3. Improve clarity, tone, and professionalism where appropriate.
+  4. If adding questions, generate appropriate unique IDs.
+  
+  Return the result in JSON format following the responseSchema.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          description: { type: Type.STRING },
+          questions: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                title: { type: Type.STRING },
+                type: { type: Type.STRING },
+                options: { 
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                },
+                required: { type: Type.BOOLEAN },
+                helpText: { type: Type.STRING }
+              },
+              required: ["id", "title", "type", "required"]
+            }
+          }
+        },
+        required: ["title", "description", "questions"]
+      }
+    }
+  });
+
+  try {
+    return JSON.parse(response.text || '{}');
+  } catch (error) {
+    throw new Error("Failed to refine form with AI.");
+  }
+};
+
 export const processDocToQuestionnaire = async (
   message: string,
   history: any[],
   fileData?: { data: string, mimeType: string }
 ): Promise<{ text: string, questionnaire?: FormStructure }> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const parts: any[] = [];
   if (fileData) {
@@ -138,7 +195,7 @@ export const processDocToQuestionnaire = async (
 };
 
 export const chatWithAssistant = async (message: string, history: any[]) => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const chat = ai.chats.create({
     model: 'gemini-3-pro-preview',
     config: {
@@ -148,4 +205,94 @@ export const chatWithAssistant = async (message: string, history: any[]) => {
 
   const response = await chat.sendMessage({ message });
   return response.text;
+};
+
+export const searchLegalDocuments = async (docType: string, state: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const prompt = `Find official and up-to-date legal documents, forms, and files related to "${docType}" for the US state of "${state}". 
+  Provide clear descriptions and identify the most reliable sources. 
+  Focus on state government websites (.gov) and official judicial resources.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: prompt,
+    config: {
+      tools: [{ googleSearch: {} }],
+    },
+  });
+
+  return {
+    text: response.text,
+    groundingChunks: response.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
+  };
+};
+
+export const convertSearchContextToForm = async (contextText: string, linkTitle: string, linkUri: string): Promise<FormStructure> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const prompt = `Based on the following legal search context, generate a structured Google Form blueprint that would capture the information typically required for this type of document/application.
+  
+  Source Title: ${linkTitle}
+  Source URL: ${linkUri}
+  Analysis Context: ${contextText}
+  
+  Return the result in JSON format following the responseSchema.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          description: { type: Type.STRING },
+          questions: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                title: { type: Type.STRING },
+                type: { type: Type.STRING },
+                options: { 
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                },
+                required: { type: Type.BOOLEAN },
+                helpText: { type: Type.STRING }
+              },
+              required: ["id", "title", "type", "required"]
+            }
+          }
+        },
+        required: ["title", "description", "questions"]
+      }
+    }
+  });
+
+  try {
+    return JSON.parse(response.text || '{}');
+  } catch (error) {
+    throw new Error("Could not structure form from search results.");
+  }
+};
+
+export const synthesizeDocumentDraft = async (contextText: string, linkTitle: string, linkUri: string): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const prompt = `Draft a professional and formal legal document or template based on the following search result for "${linkTitle}". 
+  Use standard legal formatting (headings, numbered sections, placeholders for personal info like [NAME]).
+  
+  Analysis Context: ${contextText}
+  Source: ${linkUri}
+  
+  The draft should be complete, professional, and ready for use as a template. Do not include markdown code fences, just return the plain text of the document.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: prompt,
+  });
+
+  return response.text || "Failed to generate document draft.";
 };

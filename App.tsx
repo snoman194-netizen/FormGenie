@@ -1,14 +1,16 @@
 
-import React, { useState } from 'react';
-import { Sparkles, FormInput, FileJson, Info, LayoutGrid, MessageSquareQuote } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, FormInput, FileJson, Info, LayoutGrid, MessageSquareQuote, Search, History as HistoryIcon } from 'lucide-react';
 import FileUploader from './components/FileUploader';
 import FormPreview from './components/FormPreview';
 import ChatBot from './components/ChatBot';
 import CodePreview from './components/CodePreview';
 import DataPreview from './components/DataPreview';
 import DocChat from './components/DocChat';
+import SearchTab from './components/SearchTab';
+import HistoryTab from './components/HistoryTab';
 import { convertFileToForm } from './services/gemini';
-import { FormStructure } from './types';
+import { FormStructure, SavedForm } from './types';
 
 const App: React.FC = () => {
   const [formStructure, setFormStructure] = useState<FormStructure | null>(null);
@@ -16,13 +18,40 @@ const App: React.FC = () => {
   const [showCode, setShowCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rawCsvData, setRawCsvData] = useState<string[][] | null>(null);
-  const [pendingFile, setPendingFile] = useState<{file: File, content: string} | null>(null);
-  const [activeTab, setActiveTab] = useState<'standard' | 'docchat'>('standard');
+  const [pendingFile, setPendingFile] = useState<{file: any, content: string} | null>(null);
+  const [activeTab, setActiveTab] = useState<'standard' | 'docchat' | 'search' | 'history'>('standard');
+  const [history, setHistory] = useState<SavedForm[]>([]);
 
-  const handleUpload = async (file: File, content: string) => {
+  // Load history from localStorage on mount
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('formGenieHistory');
+    if (savedHistory) {
+      try {
+        setHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error("Failed to parse history", e);
+      }
+    }
+  }, []);
+
+  // Save history to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('formGenieHistory', JSON.stringify(history));
+  }, [history]);
+
+  const saveToHistory = (structure: FormStructure) => {
+    const newEntry: SavedForm = {
+      ...structure,
+      historyId: Math.random().toString(36).substr(2, 9),
+      savedAt: Date.now()
+    };
+    setHistory(prev => [newEntry, ...prev].slice(0, 50)); // Keep last 50 entries
+  };
+
+  const handleUpload = async (file: any, content: string) => {
     setError(null);
     
-    if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+    if (file.type === 'text/csv' || (file.name && file.name.endsWith('.csv'))) {
       const rows = content.split('\n')
         .map(row => row.split(',').map(cell => cell.trim().replace(/^"|"$/g, '')))
         .filter(row => row.length > 1 || row[0] !== '');
@@ -34,12 +63,13 @@ const App: React.FC = () => {
     }
   };
 
-  const processFile = async (file: File, content: string) => {
+  const processFile = async (file: any, content: string) => {
     setIsProcessing(true);
     setError(null);
     try {
       const structure = await convertFileToForm(content, file.type, file.name);
       setFormStructure(structure);
+      saveToHistory(structure);
       setRawCsvData(null);
       setPendingFile(null);
     } catch (err) {
@@ -52,100 +82,144 @@ const App: React.FC = () => {
 
   const handleDocTransfer = (structure: FormStructure) => {
     setFormStructure(structure);
+    saveToHistory(structure);
     setActiveTab('standard');
   };
 
+  const handleSelectHistoryItem = (saved: SavedForm) => {
+    // Extract only the FormStructure parts
+    const { historyId, savedAt, ...structure } = saved;
+    setFormStructure(structure);
+    setActiveTab('standard');
+  };
+
+  const handleDeleteHistoryItem = (historyId: string) => {
+    setHistory(prev => prev.filter(item => item.historyId !== historyId));
+  };
+
+  const handleClearHistory = () => {
+    if (window.confirm("Are you sure you want to clear all history?")) {
+      setHistory([]);
+    }
+  };
+
   return (
-    <div className="min-h-screen pb-20">
-      <header className="sticky top-0 z-40 w-full bg-white/70 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="bg-indigo-600 p-2 rounded-xl">
+    <div className="min-h-screen pb-20 selection:bg-indigo-100">
+      <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-gradient-to-tr from-indigo-600 to-violet-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-200">
               <Sparkles className="text-white" size={24} />
             </div>
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">
-              FormGenie AI
+            <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+              FormGenie
             </span>
           </div>
           
-          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl">
+          <div className="flex items-center space-x-1 bg-gray-100/80 p-1.5 rounded-2xl backdrop-blur-sm">
             <button 
               onClick={() => setActiveTab('standard')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'standard' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'standard' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              <LayoutGrid size={16} />
-              <span>Generator</span>
+              <LayoutGrid size={18} />
+              <span className="hidden sm:inline">Forms Lab</span>
             </button>
             <button 
               onClick={() => setActiveTab('docchat')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'docchat' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'docchat' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              <MessageSquareQuote size={16} />
-              <span>Document AI Chat</span>
+              <MessageSquareQuote size={18} />
+              <span className="hidden sm:inline">AI Chatbot</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('search')}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'search' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <Search size={18} />
+              <span className="hidden sm:inline">Legal Search</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <HistoryIcon size={18} />
+              <span className="hidden sm:inline">History</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {activeTab === 'docchat' ? (
           <DocChat onTransfer={handleDocTransfer} onExit={() => setActiveTab('standard')} />
+        ) : activeTab === 'search' ? (
+          <SearchTab onTransfer={handleDocTransfer} />
+        ) : activeTab === 'history' ? (
+          <HistoryTab 
+            history={history} 
+            onSelect={handleSelectHistoryItem} 
+            onDelete={handleDeleteHistoryItem}
+            onClear={handleClearHistory}
+          />
         ) : (
           <>
             {!formStructure ? (
-              <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12">
+              <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-16 py-10">
                 {!rawCsvData ? (
                   <>
-                    <div className="text-center space-y-4 max-w-2xl">
-                      <h1 className="text-5xl font-extrabold text-gray-900 leading-tight">
-                        Turn your static files into <br />
-                        <span className="text-indigo-600">Dynamic Google Forms</span>
+                    <div className="text-center space-y-6 max-w-3xl">
+                      <div className="inline-flex items-center space-x-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
+                        <Sparkles size={14} /> <span>Built for Professionals</span>
+                      </div>
+                      <h1 className="text-5xl md:text-7xl font-black text-gray-900 leading-[1.1] tracking-tight">
+                        Convert data to <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Google Forms</span>
                       </h1>
-                      <p className="text-lg text-gray-600">
-                        Upload a CSV or PDF file and our AI will automatically structure questions, types, and options based on data analysis.
+                      <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto font-medium leading-relaxed">
+                        Effortlessly transform CSV data or complex PDF documents into structured surveys. Powered by Gemini AI for perfect pattern matching.
                       </p>
                     </div>
 
                     <FileUploader onUpload={handleUpload} isProcessing={isProcessing} />
 
                     {error && (
-                      <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl flex items-center">
-                        <Info size={20} className="mr-2" />
-                        {error}
+                      <div className="p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl flex items-center animate-slide-in">
+                        <Info size={20} className="mr-3 shrink-0" />
+                        <span className="text-sm font-bold">{error}</span>
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl mt-8">
-                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 mb-4">
-                          <FileJson size={20} />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl mt-12">
+                      <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-indigo-50/50 transition-all">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+                          <FileJson size={24} />
                         </div>
-                        <h3 className="font-bold text-gray-900">Upload CSV/PDF</h3>
-                        <p className="text-sm text-gray-500 mt-2">Just drop your file. We support complex surveys and lists.</p>
+                        <h3 className="text-lg font-black text-gray-900">Cloud Driven</h3>
+                        <p className="text-sm text-gray-500 mt-3 leading-relaxed font-medium">Connect directly to Google Drive to import source files or save your final scripts securely.</p>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 mb-4">
-                          <Sparkles size={20} />
+                      <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-violet-50/50 transition-all">
+                        <div className="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center text-violet-600 mb-6">
+                          <Sparkles size={24} />
                         </div>
-                        <h3 className="font-bold text-gray-900">Data-Driven AI</h3>
-                        <p className="text-sm text-gray-500 mt-2">Gemini 3 Pro analyzes patterns to choose the best question types.</p>
+                        <h3 className="text-lg font-black text-gray-900">Neural Analysis</h3>
+                        <p className="text-sm text-gray-500 mt-3 leading-relaxed font-medium">Advanced pattern detection automatically configures dropdowns, checkboxes, and required fields.</p>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mb-4">
-                          <FormInput size={20} />
+                      <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-blue-50/50 transition-all">
+                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6">
+                          <FormInput size={24} />
                         </div>
-                        <h3 className="font-bold text-gray-900">Export to Forms</h3>
-                        <p className="text-sm text-gray-500 mt-2">Get a one-click Google Apps Script to build your form live.</p>
+                        <h3 className="text-lg font-black text-gray-900">Native Export</h3>
+                        <p className="text-sm text-gray-500 mt-3 leading-relaxed font-medium">Generates production-ready Google Apps Script. 100% compatible with the official Google Forms API.</p>
                       </div>
                     </div>
                   </>
                 ) : (
-                  <div className="w-full flex flex-col items-center space-y-6">
+                  <div className="w-full flex flex-col items-center space-y-8 animate-slide-in">
                     <button 
                       onClick={() => setRawCsvData(null)}
-                      className="text-sm text-gray-500 hover:text-indigo-600 font-medium self-start ml-4 md:ml-20 flex items-center"
+                      className="text-sm text-gray-400 hover:text-indigo-600 font-bold flex items-center transition-colors group"
                     >
-                      &larr; Upload different file
+                      <span className="mr-2 group-hover:-translate-x-1 transition-transform">&larr;</span> Change Source File
                     </button>
                     <DataPreview 
                       csvData={rawCsvData} 
@@ -156,22 +230,22 @@ const App: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="flex items-center justify-between">
+              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-gray-100 pb-8">
                   <div>
                     <button 
                       onClick={() => {
                         setFormStructure(null);
                         setRawCsvData(null);
                       }}
-                      className="text-sm text-indigo-600 hover:underline flex items-center font-medium"
+                      className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center hover:opacity-70"
                     >
-                      &larr; Start New Conversion
+                      <span className="mr-2">&larr;</span> Back to Upload
                     </button>
-                    <h2 className="text-2xl font-bold text-gray-900 mt-2">Edit Generated Form</h2>
+                    <h2 className="text-4xl font-black text-gray-900 mt-4 tracking-tight">Form Blueprint</h2>
                   </div>
-                  <div className="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center">
-                    <Sparkles size={14} className="mr-2" /> Patterns Analyzed
+                  <div className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center shadow-sm">
+                    <Sparkles size={16} className="mr-3" /> Structure Generated by AI
                   </div>
                 </div>
 
@@ -192,9 +266,18 @@ const App: React.FC = () => {
       
       <ChatBot />
 
-      <footer className="mt-20 py-10 border-t border-gray-100 bg-white">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-400 text-sm">This app was built by Syed Noman with Gemini AI 2026</p>
+      <footer className="mt-32 py-12 border-t border-gray-100 bg-white">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center space-x-3 grayscale opacity-50">
+             <div className="bg-gray-200 p-1.5 rounded-lg"><Sparkles size={18} /></div>
+             <span className="font-bold text-gray-500">FormGenie AI</span>
+          </div>
+          <p className="text-gray-400 text-sm font-medium">This app was built by Syed Noman with Gemini AI 2026</p>
+          <div className="flex space-x-8 text-xs font-black text-gray-400 uppercase tracking-widest">
+             <a href="#" className="hover:text-indigo-600 transition-colors">Documentation</a>
+             <a href="#" className="hover:text-indigo-600 transition-colors">Privacy</a>
+             <a href="#" className="hover:text-indigo-600 transition-colors">Security</a>
+          </div>
         </div>
       </footer>
     </div>

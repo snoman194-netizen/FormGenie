@@ -22,6 +22,11 @@ export interface FormStructure {
   questions: FormQuestion[];
 }
 
+export interface SavedForm extends FormStructure {
+  historyId: string;
+  savedAt: number;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
