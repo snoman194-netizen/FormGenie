@@ -2,6 +2,9 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { FormStructure, QuestionType } from "../types";
 
+const COMPLEX_MODEL = 'gemini-3-pro-preview';
+const THINKING_BUDGET = 32768;
+
 export const convertFileToForm = async (
   fileData: string, 
   mimeType: string,
@@ -47,9 +50,10 @@ export const convertFileToForm = async (
   }
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: COMPLEX_MODEL,
     contents: { parts },
     config: {
+      thinkingConfig: { thinkingBudget: THINKING_BUDGET },
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -87,9 +91,6 @@ export const convertFileToForm = async (
   }
 };
 
-/**
- * Refines an existing form structure using AI based on user instructions.
- */
 export const refineFormWithAI = async (currentForm: FormStructure, instruction: string): Promise<FormStructure> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const prompt = `Refine the following Google Form structure based on this instruction: "${instruction}".
@@ -106,9 +107,10 @@ export const refineFormWithAI = async (currentForm: FormStructure, instruction: 
   Return the result in JSON format following the responseSchema.`;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: COMPLEX_MODEL,
     contents: prompt,
     config: {
+      thinkingConfig: { thinkingBudget: THINKING_BUDGET },
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -149,7 +151,8 @@ export const refineFormWithAI = async (currentForm: FormStructure, instruction: 
 export const processDocToQuestionnaire = async (
   message: string,
   history: any[],
-  fileData?: { data: string, mimeType: string }
+  fileData?: { data: string, mimeType: string },
+  deepThink: boolean = false
 ): Promise<{ text: string, questionnaire?: FormStructure }> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
@@ -165,9 +168,10 @@ export const processDocToQuestionnaire = async (
   parts.push({ text: message });
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: COMPLEX_MODEL,
     contents: { parts },
     config: {
+      thinkingConfig: deepThink ? { thinkingBudget: THINKING_BUDGET } : undefined,
       systemInstruction: `You are an expert Document-to-Questionnaire analyst. 
       Your goal is to extract structured survey/questionnaire data from documents.
       Always respond conversationally, BUT if you identify questions, also provide a hidden JSON structure at the end of your message delimited by [JSON_START] and [JSON_END].
@@ -194,11 +198,14 @@ export const processDocToQuestionnaire = async (
   };
 };
 
-export const chatWithAssistant = async (message: string, history: any[]) => {
+export const chatWithAssistant = async (message: string, historyPayload: any[], deepThink: boolean = false) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const chat = ai.chats.create({
-    model: 'gemini-3-pro-preview',
+  
+  const response = await ai.models.generateContent({
+    model: COMPLEX_MODEL,
+    contents: historyPayload,
     config: {
+      thinkingConfig: deepThink ? { thinkingBudget: THINKING_BUDGET } : undefined,
       systemInstruction: `You are FormGenie Assistant. You specialize in converting data (CSV/PDF) into Google Forms AND drafting legal documents based on US state laws.
 
 If the user wants to draft a legal document:
@@ -213,7 +220,6 @@ If the user wants to draft a legal document:
     }
   });
 
-  const response = await chat.sendMessage({ message });
   return response.text;
 };
 
@@ -223,11 +229,14 @@ export const searchLegalDocuments = async (docType: string, state: string) => {
   Provide clear descriptions and identify the most reliable sources. 
   Focus on state government websites (.gov) and official judicial resources.`;
 
+  // Explicitly use the Pro model to satisfy the user's intelligence requirements
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: COMPLEX_MODEL, 
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
+      // Search results might benefit from thinking for complex syntheses if needed,
+      // but standard grounding usually handles the output.
     },
   });
 
@@ -249,9 +258,10 @@ export const convertSearchContextToForm = async (contextText: string, linkTitle:
   Return the result in JSON format following the responseSchema.`;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: COMPLEX_MODEL,
     contents: prompt,
     config: {
+      thinkingConfig: { thinkingBudget: THINKING_BUDGET },
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -300,8 +310,11 @@ export const synthesizeDocumentDraft = async (contextText: string, linkTitle: st
   The draft should be complete, professional, and ready for use as a template. Do not include markdown code fences, just return the plain text of the document.`;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: COMPLEX_MODEL,
     contents: prompt,
+    config: {
+      thinkingConfig: { thinkingBudget: THINKING_BUDGET }
+    }
   });
 
   return response.text || "Failed to generate document draft.";

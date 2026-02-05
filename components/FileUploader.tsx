@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, X, Loader2, Table, Cloud } from 'lucide-react';
-import { openDrivePicker, initGoogleAuth } from '../services/googleDrive';
+import { Upload, FileText, X, Loader2, Table } from 'lucide-react';
+import { initGoogleAuth } from '../services/googleDrive';
 
 // Fix: Declare global google object to resolve 'Cannot find name google' errors
 declare const google: any;
@@ -35,18 +35,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onUpload, isProcessing }) =
       reader.readAsDataURL(file);
     } else {
       reader.readAsText(file);
-    }
-  };
-
-  const handleDriveImport = async () => {
-    try {
-      await openDrivePicker((fileData) => {
-        setSelectedFile({ name: fileData.name, type: fileData.type });
-        onUpload({ name: fileData.name, type: fileData.type }, fileData.content);
-      });
-    } catch (error) {
-      console.error('Drive import failed', error);
-      alert('Could not connect to Google Drive. Ensure the Client ID is configured.');
     }
   };
 
@@ -108,7 +96,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onUpload, isProcessing }) =
               </div>
               <div className="space-y-1">
                 <p className="text-xl font-bold text-gray-900">Upload your source file</p>
-                <p className="text-sm text-gray-500">Drag and drop CSV or PDF, or pick from Drive</p>
+                <p className="text-sm text-gray-500">Drag and drop CSV or PDF to begin analysis</p>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
                 <button 
@@ -117,13 +105,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onUpload, isProcessing }) =
                 >
                   <FileText size={18} />
                   <span>Browse Locally</span>
-                </button>
-                <button 
-                  onClick={handleDriveImport}
-                  className="w-full sm:w-auto px-8 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center space-x-2"
-                >
-                  <Cloud size={18} className="text-blue-500" />
-                  <span>Import from Drive</span>
                 </button>
               </div>
             </>
@@ -136,7 +117,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onUpload, isProcessing }) =
                 <div className="text-left">
                   <p className="font-bold text-gray-900 truncate max-w-[200px]">{selectedFile.name}</p>
                   <p className="text-xs text-gray-500 font-medium">
-                    {selectedFile.size ? `${(selectedFile.size / 1024).toFixed(1)} KB` : 'Cloud File'}
+                    {selectedFile.size ? `${(selectedFile.size / 1024).toFixed(1)} KB` : 'Local File'}
                   </p>
                 </div>
               </div>

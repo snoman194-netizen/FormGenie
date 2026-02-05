@@ -1,6 +1,6 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Minimize2, Maximize2, MessageSquare, X, SkipForward, ChevronDown, History as HistoryIcon, Plus, Trash2, MessageCircle } from 'lucide-react';
+import { Bot, BrainCircuit, ChevronDown, History as HistoryIcon, Maximize2, MessageCircle, MessageSquare, Minimize2, Plus, Send, SkipForward, Trash2, User, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { chatWithAssistant } from '../services/gemini';
 import { ChatMessage, ChatSession } from '../types';
 
@@ -15,6 +15,7 @@ const ChatBot: React.FC = () => {
   
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeepThink, setIsDeepThink] = useState(false);
   const [isWaitingForField, setIsWaitingForField] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   
@@ -93,7 +94,7 @@ const ChatBot: React.FC = () => {
         parts: [{ text: m.content }]
       }));
 
-      const responseText = await chatWithAssistant(textToSend, historyPayload);
+      const responseText = await chatWithAssistant(textToSend, historyPayload, isDeepThink);
       const cleanedResponse = processResponse(responseText || "");
       
       const assistantMsg: ChatMessage = { 
@@ -127,8 +128,6 @@ const ChatBot: React.FC = () => {
   };
 
   const loadSession = (session: ChatSession) => {
-    // Current chat is implicitly archived to history by this logic if we want, 
-    // but for now let's just switch.
     setMessages(session.messages);
     setView('chat');
   };
@@ -146,12 +145,12 @@ const ChatBot: React.FC = () => {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-8 right-8 group z-50">
+      <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 group z-50">
         <button 
           onClick={() => setIsOpen(true)}
-          className="p-4 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all hover:scale-110 flex items-center justify-center animate-in zoom-in duration-300"
+          className="p-4 sm:p-5 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all hover:scale-110 flex items-center justify-center animate-in zoom-in duration-300 ring-4 ring-indigo-100/50"
         >
-          <MessageSquare size={24} />
+          <MessageSquare size={24} className="sm:w-7 sm:h-7" />
         </button>
         <button 
           onClick={(e) => {
@@ -168,16 +167,16 @@ const ChatBot: React.FC = () => {
   }
 
   return (
-    <div className={`fixed right-8 bottom-8 w-[400px] max-w-[calc(100vw-2rem)] bg-white rounded-[32px] shadow-2xl z-50 transition-all duration-300 flex flex-col overflow-hidden border border-gray-100 animate-in slide-in-from-bottom-4 ${isMinimized ? 'h-20' : 'h-[500px]'}`}>
+    <div className={`fixed bottom-4 right-4 left-4 sm:left-auto sm:right-8 sm:bottom-8 w-auto sm:w-[400px] bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl z-50 transition-all duration-300 flex flex-col overflow-hidden border border-gray-100 animate-in slide-in-from-bottom-4 ${isMinimized ? 'h-16 sm:h-20' : 'h-[75vh] sm:h-[550px]'}`}>
       {/* Header */}
-      <div className="bg-indigo-600 p-5 text-white flex items-center justify-between shrink-0">
+      <div className="bg-indigo-600 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-white/20 rounded-xl">
-            <Bot size={20} />
+            <Bot size={20} className="sm:w-6 sm:h-6" />
           </div>
           <div>
             <h3 className="font-black text-sm tracking-tight">FormGenie AI</h3>
-            <p className="text-[10px] text-indigo-100 font-bold uppercase tracking-widest">Assistant Online</p>
+            <p className="hidden sm:block text-[10px] text-indigo-100 font-bold uppercase tracking-widest">Assistant Online</p>
           </div>
         </div>
         <div className="flex items-center space-x-1">
@@ -188,13 +187,24 @@ const ChatBot: React.FC = () => {
           >
             <HistoryIcon size={18} />
           </button>
-          <button 
-            onClick={() => setIsMinimized(!isMinimized)} 
-            className="p-2 hover:bg-white/10 rounded-xl transition-all" 
-            title={isMinimized ? "Restore" : "Minimize"}
-          >
-            {isMinimized ? <Maximize2 size={18} /> : <Minimize2 size={18} />}
-          </button>
+          {!isMinimized && (
+            <button 
+              onClick={() => setIsMinimized(true)} 
+              className="p-2 hover:bg-white/10 rounded-xl transition-all hidden sm:block" 
+              title="Minimize"
+            >
+              <Minimize2 size={18} />
+            </button>
+          )}
+          {isMinimized && (
+            <button 
+              onClick={() => setIsMinimized(false)} 
+              className="p-2 hover:bg-white/10 rounded-xl transition-all" 
+              title="Restore"
+            >
+              <Maximize2 size={18} />
+            </button>
+          )}
           <button 
             onClick={() => setIsOpen(false)} 
             className="p-2 hover:bg-white/10 rounded-xl transition-all" 
@@ -206,14 +216,14 @@ const ChatBot: React.FC = () => {
       </div>
 
       {!isMinimized && (
-        <div className="flex-grow flex flex-col relative overflow-hidden">
+        <div className="flex-grow flex flex-col relative overflow-hidden bg-white">
           {view === 'chat' ? (
             <>
               {/* Scroll Down Hint */}
               {showScrollButton && (
                 <button 
                   onClick={scrollToBottom}
-                  className="absolute bottom-20 right-6 p-2 bg-indigo-600 text-white rounded-full shadow-xl z-20 hover:scale-110 transition-all animate-bounce"
+                  className="absolute bottom-24 right-4 sm:right-6 p-2 bg-indigo-600 text-white rounded-full shadow-xl z-20 hover:scale-110 transition-all animate-bounce"
                   title="Scroll to latest"
                 >
                   <ChevronDown size={20} />
@@ -224,15 +234,15 @@ const ChatBot: React.FC = () => {
               <div 
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50/50 custom-scrollbar"
+                className="flex-grow overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50 custom-scrollbar"
               >
                 {messages.map((m, idx) => (
                   <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`flex max-w-[85%] space-x-3 ${m.role === 'user' ? 'flex-row-reverse space-x-reverse' : 'flex-row'}`}>
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm ${m.role === 'user' ? 'bg-indigo-500' : 'bg-indigo-600'}`}>
-                        {m.role === 'user' ? <User size={14} /> : <Bot size={14} />}
+                    <div className={`flex max-w-[90%] sm:max-w-[85%] space-x-2 sm:space-x-3 ${m.role === 'user' ? 'flex-row-reverse space-x-reverse' : 'flex-row'}`}>
+                      <div className={`flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shadow-sm ${m.role === 'user' ? 'bg-indigo-500' : 'bg-indigo-600'}`}>
+                        {m.role === 'user' ? <User size={12} className="sm:w-4 sm:h-4" /> : <Bot size={12} className="sm:w-4 sm:h-4" />}
                       </div>
-                      <div className={`p-4 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-tl-none whitespace-pre-wrap'}`}>
+                      <div className={`p-3 sm:p-4 rounded-2xl text-[13px] sm:text-sm leading-relaxed ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-tl-none whitespace-pre-wrap'}`}>
                         {m.content}
                       </div>
                     </div>
@@ -240,11 +250,11 @@ const ChatBot: React.FC = () => {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start animate-pulse">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
-                        <Bot size={14} />
+                    <div className="flex items-start space-x-2 sm:space-x-3">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                        <Bot size={12} className="sm:w-4 sm:h-4" />
                       </div>
-                      <div className="bg-white border border-gray-100 p-4 rounded-2xl rounded-tl-none shadow-sm">
+                      <div className="bg-white border border-gray-100 p-3 sm:p-4 rounded-2xl rounded-tl-none shadow-sm">
                         <div className="flex space-x-1.5">
                           <div className="w-2 h-2 bg-indigo-200 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                           <div className="w-2 h-2 bg-indigo-200 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
@@ -258,35 +268,46 @@ const ChatBot: React.FC = () => {
               </div>
 
               {/* Input Area */}
-              <div className="p-4 bg-white border-t border-gray-100 shrink-0 z-10">
+              <div className="p-3 sm:p-4 bg-white border-t border-gray-100 shrink-0 z-10 space-y-2 sm:space-y-3">
+                <div className="flex items-center justify-between px-1 overflow-x-auto no-scrollbar">
+                  <button 
+                    onClick={() => setIsDeepThink(!isDeepThink)}
+                    className={`flex items-center space-x-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full whitespace-nowrap ${isDeepThink ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                  >
+                    <BrainCircuit size={12} className={isDeepThink ? 'animate-pulse sm:w-3.5 sm:h-3.5' : 'sm:w-3.5 sm:h-3.5'} />
+                    <span>Deep Think</span>
+                  </button>
+                  {isDeepThink && <span className="hidden sm:inline text-[10px] font-bold text-indigo-400 animate-pulse">Maximum IQ Active</span>}
+                </div>
+                
                 <div className="flex items-center space-x-2">
                   <input 
                     type="text" 
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder={isWaitingForField ? "Enter details or skip..." : "How can I help you?"}
-                    className="flex-grow bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3 text-sm text-black focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
+                    placeholder={isWaitingForField ? "Details or skip..." : "Need help?"}
+                    className="flex-grow bg-gray-50 border border-gray-100 rounded-xl sm:rounded-2xl px-4 sm:px-5 py-2.5 sm:py-3 text-[13px] sm:text-sm text-black focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-medium"
                   />
                   
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-1 sm:space-x-2">
                     {isWaitingForField && (
                       <button 
                         onClick={handleSkip}
                         disabled={isLoading}
-                        className="p-3 bg-gray-100 text-gray-500 rounded-2xl hover:bg-gray-200 disabled:opacity-50 transition-all active:scale-95 flex items-center justify-center"
+                        className="p-2.5 sm:p-3 bg-gray-100 text-gray-500 rounded-xl sm:rounded-2xl hover:bg-gray-200 disabled:opacity-50 transition-all active:scale-95 flex items-center justify-center"
                         title="Skip Field"
                       >
-                        <SkipForward size={20} />
+                        <SkipForward size={18} className="sm:w-5 sm:h-5" />
                       </button>
                     )}
                     
                     <button 
                       onClick={() => handleSend()}
                       disabled={isLoading || !input.trim()}
-                      className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center justify-center"
+                      className="p-2.5 sm:p-3 bg-indigo-600 text-white rounded-xl sm:rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center justify-center"
                     >
-                      <Send size={20} />
+                      <Send size={18} className="sm:w-5 sm:h-5" />
                     </button>
                   </div>
                 </div>
@@ -294,49 +315,49 @@ const ChatBot: React.FC = () => {
             </>
           ) : (
             <div className="flex-grow flex flex-col bg-white animate-in slide-in-from-right-4 duration-300">
-              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h4 className="font-black text-gray-900 flex items-center space-x-2">
+              <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between">
+                <h4 className="font-black text-gray-900 flex items-center space-x-2 text-sm sm:text-base">
                   <HistoryIcon size={18} className="text-indigo-600" />
                   <span>Past Sessions</span>
                 </h4>
                 <button 
                   onClick={handleNewChat}
-                  className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center hover:bg-indigo-600 hover:text-white transition-all"
+                  className="bg-indigo-50 text-indigo-600 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center hover:bg-indigo-600 hover:text-white transition-all"
                 >
-                  <Plus size={14} className="mr-2" /> New Chat
+                  <Plus size={14} className="mr-1 sm:mr-2" /> New Chat
                 </button>
               </div>
               
-              <div className="flex-grow overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              <div className="flex-grow overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 custom-scrollbar">
                 {history.length > 0 ? (
                   history.map((session) => (
                     <div 
                       key={session.id}
                       onClick={() => loadSession(session)}
-                      className="p-4 rounded-2xl bg-gray-50 border border-transparent hover:border-indigo-200 hover:bg-indigo-50/30 transition-all cursor-pointer group relative"
+                      className="p-3 sm:p-4 rounded-2xl bg-gray-50 border border-transparent hover:border-indigo-200 hover:bg-indigo-50/30 transition-all cursor-pointer group relative"
                     >
                       <div className="flex items-center space-x-3">
                         <div className="p-2 bg-white rounded-lg text-indigo-400 group-hover:text-indigo-600">
                           <MessageCircle size={16} />
                         </div>
                         <div className="flex-grow min-w-0">
-                          <p className="text-sm font-bold text-gray-900 truncate">{session.title}</p>
+                          <p className="text-[13px] sm:text-sm font-bold text-gray-900 truncate">{session.title}</p>
                           <p className="text-[10px] text-gray-400 font-medium mt-0.5">{new Date(session.updatedAt).toLocaleDateString()}</p>
                         </div>
                       </div>
                       <button 
                         onClick={(e) => deleteSession(session.id, e)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 rounded-lg transition-all text-gray-300"
+                        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 rounded-lg transition-all text-gray-300"
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
                   ))
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-10 opacity-40">
-                    <HistoryIcon size={48} className="text-gray-200 mb-4" />
-                    <p className="text-sm font-black text-gray-400">No session history found</p>
-                    <p className="text-xs text-gray-400 mt-2">Sessions you archive will appear here.</p>
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-10 opacity-40">
+                    <HistoryIcon size={40} className="text-gray-200 mb-4 sm:w-12 sm:h-12" />
+                    <p className="text-xs sm:text-sm font-black text-gray-400">No session history found</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-2">Archived chats appear here.</p>
                   </div>
                 )}
               </div>
@@ -344,9 +365,9 @@ const ChatBot: React.FC = () => {
               <div className="p-4 border-t border-gray-100">
                 <button 
                   onClick={() => setView('chat')}
-                  className="w-full py-3 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
+                  className="w-full py-2 sm:py-3 text-xs sm:text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
                 >
-                  Back to active chat
+                  Back to Active Chat
                 </button>
               </div>
             </div>
