@@ -3,11 +3,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, X, Loader2, Table } from 'lucide-react';
 import { initGoogleAuth } from '../services/googleDrive';
 
-// Fix: Declare global google object to resolve 'Cannot find name google' errors
+// Declare global google object to resolve 'Cannot find name google' errors
 declare const google: any;
 
 interface FileUploaderProps {
-  onUpload: (file: File | { name: string, type: string }, content: string) => void;
+  onUpload: (file: File | { name: string, type: string }, content: string) => void | Promise<void>;
   isProcessing: boolean;
 }
 
@@ -17,7 +17,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onUpload, isProcessing }) =
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Attempt to init Google Identity Services if needed
     if (typeof google !== 'undefined') {
       initGoogleAuth().catch(console.error);
     }
