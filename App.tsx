@@ -58,11 +58,25 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    if (window.confirm("Are you sure you want to sign out?")) {
+    if (window.confirm("Are you sure you want to sign out? Your current chat sessions will be cleared.")) {
       setUserName(null);
       setIsAuthenticated(false);
+      
+      // Clear all user data
       localStorage.removeItem('formGenieUserName');
       localStorage.removeItem('formGenieIsAuthenticated');
+      localStorage.removeItem('formGenieHistory');
+      
+      // Clear Chat Data
+      localStorage.removeItem('formGenie_assistant_active_chat');
+      localStorage.removeItem('formGenie_assistant_history');
+      localStorage.removeItem('formGenie_docchat_active_chat');
+      localStorage.removeItem('formGenie_docchat_history');
+      
+      // Reset App State
+      setFormStructure(null);
+      setHistory([]);
+      setActiveTab('home');
     }
   };
 
@@ -80,7 +94,7 @@ const App: React.FC = () => {
     
     if (file.type === 'text/csv' || (file.name && file.name.endsWith('.csv'))) {
       const rows = content.split('\n')
-        .map(row => row.split(',').map(cell => cell.trim().replace(/^"|"$/g, '')))
+        .map(row => row.split(',').map(cell => cell.trim().replace(/^"|^"|"$/g, '')))
         .filter(row => row.length > 1 || row[0] !== '');
       
       setRawCsvData(rows);
@@ -253,7 +267,7 @@ const App: React.FC = () => {
 
                     {error && (
                       <div className="p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl flex items-center animate-slide-in">
-                        <info size={20} className="mr-3 shrink-0" />
+                        <Info size={20} className="mr-3 shrink-0" />
                         <span className="text-sm font-bold">{error}</span>
                       </div>
                     )}

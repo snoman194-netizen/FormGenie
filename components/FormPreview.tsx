@@ -44,13 +44,13 @@ const FormPreview: React.FC<FormPreviewProps> = ({ form, onUpdate, onGenerateScr
           type="text" 
           value={form.title} 
           onChange={(e) => onUpdate({ ...form, title: e.target.value })}
-          className="text-4xl font-black text-gray-900 w-full focus:outline-none border-b border-transparent focus:border-gray-100 py-1 transition-all"
+          className="text-4xl font-black text-black w-full focus:outline-none border-b border-transparent focus:border-gray-100 py-1 transition-all"
           placeholder="Form Title"
         />
         <textarea 
           value={form.description}
           onChange={(e) => onUpdate({ ...form, description: e.target.value })}
-          className="mt-6 text-gray-500 font-medium w-full focus:outline-none border-b border-transparent focus:border-gray-100 py-1 resize-none leading-relaxed text-lg"
+          className="mt-6 text-black font-medium w-full focus:outline-none border-b border-transparent focus:border-gray-100 py-1 resize-none leading-relaxed text-lg"
           placeholder="Form description"
           rows={2}
         />
@@ -74,7 +74,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({ form, onUpdate, onGenerateScr
                     newQuestions[idx].title = e.target.value;
                     onUpdate({ ...form, questions: newQuestions });
                   }}
-                  className="text-xl font-bold text-gray-800 w-full bg-gray-50/50 px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:bg-white transition-all border border-transparent focus:border-indigo-50"
+                  className="text-xl font-bold text-black w-full bg-gray-50/50 px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:bg-white transition-all border border-transparent focus:border-indigo-50"
                   placeholder="Question text"
                 />
                 
@@ -94,7 +94,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({ form, onUpdate, onGenerateScr
                             newQuestions[idx].options = newOptions;
                             onUpdate({ ...form, questions: newQuestions });
                           }}
-                          className="text-sm font-medium text-gray-600 focus:outline-none border-b border-transparent hover:border-gray-100 transition-colors py-1 flex-grow bg-transparent"
+                          className="text-sm font-medium text-black focus:outline-none border-b border-transparent hover:border-gray-100 transition-colors py-1 flex-grow bg-transparent"
                         />
                         <button 
                           onClick={() => {

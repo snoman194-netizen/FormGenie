@@ -51,7 +51,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 onChange={(e) => setName(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleNext()}
                 placeholder="Enter your name"
-                className="w-full bg-gray-50 border-2 border-transparent focus:border-indigo-100 focus:bg-white rounded-[24px] pl-14 pr-6 py-5 text-xl font-bold text-gray-900 shadow-sm transition-all focus:outline-none placeholder:text-gray-300"
+                className="w-full bg-gray-50 border-2 border-transparent focus:border-indigo-100 focus:bg-white rounded-[24px] pl-14 pr-6 py-5 text-xl font-bold text-black shadow-sm transition-all focus:outline-none placeholder:text-gray-300"
                 autoFocus
               />
             </div>
