@@ -26,10 +26,9 @@ const SearchTab: React.FC<SearchTabProps> = ({ onTransfer }) => {
     setError(null);
     try {
       const data = await searchLegalDocuments(docType, stateName);
-      // Explicitly providing defaults to satisfy strict TypeScript checks
       setResults({
-        text: data.text || "",
-        groundingChunks: data.groundingChunks || []
+        text: String(data.text || ""),
+        groundingChunks: Array.isArray(data.groundingChunks) ? data.groundingChunks : []
       });
     } catch (err) {
       console.error(err);
@@ -80,7 +79,6 @@ const SearchTab: React.FC<SearchTabProps> = ({ onTransfer }) => {
         doc.text(splitText, 15, 20);
         doc.save(`${fileName}.pdf`);
       } else {
-        // Simple Word download trick using HTML
         const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
               "xmlns:w='urn:schemas-microsoft-com:office:word' "+
               "xmlns='http://www.w3.org/TR/REC-html40'>"+
@@ -106,7 +104,6 @@ const SearchTab: React.FC<SearchTabProps> = ({ onTransfer }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-12 py-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Search Header Section */}
       <div className="text-center space-y-4">
         <div className="inline-flex items-center space-x-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
           <Gavel size={14} /> <span>USA Legal Intelligence</span>
@@ -117,7 +114,6 @@ const SearchTab: React.FC<SearchTabProps> = ({ onTransfer }) => {
         </p>
       </div>
 
-      {/* Search Form */}
       <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
         <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
@@ -160,7 +156,6 @@ const SearchTab: React.FC<SearchTabProps> = ({ onTransfer }) => {
         </div>
       )}
 
-      {/* Search Results */}
       {results && (
         <div className="space-y-8 animate-in fade-in duration-700">
           <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 overflow-hidden">
