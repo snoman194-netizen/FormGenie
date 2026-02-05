@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, FormInput, FileJson, Info, LayoutGrid, MessageSquareQuote, Search, History as HistoryIcon } from 'lucide-react';
+import { Sparkles, FormInput, FileJson, Info, LayoutGrid, MessageSquareQuote, Search, History as HistoryIcon, Home, LogOut } from 'lucide-react';
 import FileUploader from './components/FileUploader';
 import FormPreview from './components/FormPreview';
 import ChatBot from './components/ChatBot';
@@ -9,21 +9,32 @@ import DataPreview from './components/DataPreview';
 import DocChat from './components/DocChat';
 import SearchTab from './components/SearchTab';
 import HistoryTab from './components/HistoryTab';
+import HomeTab from './components/HomeTab';
+import Onboarding from './components/Onboarding';
 import { convertFileToForm } from './services/gemini';
 import { FormStructure, SavedForm } from './types';
 
 const App: React.FC = () => {
+  const [userName, setUserName] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formStructure, setFormStructure] = useState<FormStructure | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rawCsvData, setRawCsvData] = useState<string[][] | null>(null);
   const [pendingFile, setPendingFile] = useState<{file: any, content: string} | null>(null);
-  const [activeTab, setActiveTab] = useState<'standard' | 'docchat' | 'search' | 'history'>('standard');
+  const [activeTab, setActiveTab] = useState<'home' | 'standard' | 'docchat' | 'search' | 'history'>('home');
   const [history, setHistory] = useState<SavedForm[]>([]);
 
-  // Load history from localStorage on mount
+  // Load user and history from localStorage on mount
   useEffect(() => {
+    const savedName = localStorage.getItem('formGenieUserName');
+    const savedAuth = localStorage.getItem('formGenieIsAuthenticated');
+    if (savedName && savedAuth === 'true') {
+      setUserName(savedName);
+      setIsAuthenticated(true);
+    }
+
     const savedHistory = localStorage.getItem('formGenieHistory');
     if (savedHistory) {
       try {
@@ -34,10 +45,26 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Save history to localStorage whenever it changes
+  // Save data to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('formGenieHistory', JSON.stringify(history));
   }, [history]);
+
+  const handleLoginComplete = (name: string) => {
+    setUserName(name);
+    setIsAuthenticated(true);
+    localStorage.setItem('formGenieUserName', name);
+    localStorage.setItem('formGenieIsAuthenticated', 'true');
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Are you sure you want to sign out?")) {
+      setUserName(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem('formGenieUserName');
+      localStorage.removeItem('formGenieIsAuthenticated');
+    }
+  };
 
   const saveToHistory = (structure: FormStructure) => {
     const newEntry: SavedForm = {
@@ -87,7 +114,6 @@ const App: React.FC = () => {
   };
 
   const handleSelectHistoryItem = (saved: SavedForm) => {
-    // Extract only the FormStructure parts
     const { historyId, savedAt, ...structure } = saved;
     setFormStructure(structure);
     setActiveTab('standard');
@@ -103,55 +129,98 @@ const App: React.FC = () => {
     }
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
+  if (!isAuthenticated) {
+    return <Onboarding onComplete={handleLoginComplete} />;
+  }
+
   return (
-    <div className="min-h-screen pb-20 selection:bg-indigo-100">
+    <div className="min-h-screen pb-20 selection:bg-indigo-100 animate-in fade-in duration-1000">
       <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-gradient-to-tr from-indigo-600 to-violet-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-200">
-              <Sparkles className="text-white" size={24} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-4">
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
+              <div className="bg-gradient-to-tr from-indigo-600 to-violet-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-200">
+                <Sparkles className="text-white" size={24} />
+              </div>
+              <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+                FormGenie
+              </span>
             </div>
-            <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-              FormGenie
-            </span>
+            
+            <div className="hidden md:flex h-8 w-px bg-gray-100 mx-2" />
+            
+            <div className="hidden md:block">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-0.5">{getGreeting()},</p>
+              <p className="text-sm font-black text-indigo-600 tracking-tight">{userName}! ✨</p>
+            </div>
           </div>
           
-          <div className="flex items-center space-x-1 bg-gray-100/80 p-1.5 rounded-2xl backdrop-blur-sm">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1 bg-gray-100/80 p-1.5 rounded-2xl backdrop-blur-sm">
+              <button 
+                onClick={() => setActiveTab('home')}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'home' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <Home size={18} />
+                <span className="hidden lg:inline">Home</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('standard')}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'standard' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <LayoutGrid size={18} />
+                <span className="hidden lg:inline">Lab</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('docchat')}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'docchat' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <MessageSquareQuote size={18} />
+                <span className="hidden lg:inline">AI Chat</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('search')}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'search' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <Search size={18} />
+                <span className="hidden lg:inline">Search</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('history')}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <HistoryIcon size={18} />
+                <span className="hidden lg:inline">History</span>
+              </button>
+            </div>
+
             <button 
-              onClick={() => setActiveTab('standard')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'standard' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={handleLogout}
+              className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+              title="Sign Out"
             >
-              <LayoutGrid size={18} />
-              <span className="hidden sm:inline">Forms Lab</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('docchat')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'docchat' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <MessageSquareQuote size={18} />
-              <span className="hidden sm:inline">AI Chatbot</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('search')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'search' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <Search size={18} />
-              <span className="hidden sm:inline">Legal Search</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('history')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-white text-indigo-600 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <HistoryIcon size={18} />
-              <span className="hidden sm:inline">History</span>
+              <LogOut size={20} />
             </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {activeTab === 'docchat' ? (
-          <DocChat onTransfer={handleDocTransfer} onExit={() => setActiveTab('standard')} />
+        {activeTab === 'home' ? (
+          <HomeTab 
+            onNavigate={setActiveTab} 
+            history={history} 
+            onSelectHistory={handleSelectHistoryItem} 
+          />
+        ) : activeTab === 'docchat' ? (
+          <DocChat onTransfer={handleDocTransfer} onExit={() => setActiveTab('home')} />
         ) : activeTab === 'search' ? (
           <SearchTab onTransfer={handleDocTransfer} />
         ) : activeTab === 'history' ? (
@@ -184,7 +253,7 @@ const App: React.FC = () => {
 
                     {error && (
                       <div className="p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl flex items-center animate-slide-in">
-                        <Info size={20} className="mr-3 shrink-0" />
+                        <info size={20} className="mr-3 shrink-0" />
                         <span className="text-sm font-bold">{error}</span>
                       </div>
                     )}
@@ -268,7 +337,7 @@ const App: React.FC = () => {
 
       <footer className="mt-32 py-12 border-t border-gray-100 bg-white">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center space-x-3 grayscale opacity-50">
+          <div className="flex items-center space-x-3 grayscale opacity-50 cursor-pointer" onClick={() => setActiveTab('home')}>
              <div className="bg-gray-200 p-1.5 rounded-lg"><Sparkles size={18} /></div>
              <span className="font-bold text-gray-500">FormGenie AI</span>
           </div>
