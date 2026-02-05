@@ -26,7 +26,11 @@ const SearchTab: React.FC<SearchTabProps> = ({ onTransfer }) => {
     setError(null);
     try {
       const data = await searchLegalDocuments(docType, stateName);
-      setResults(data);
+      // Explicitly providing defaults to satisfy strict TypeScript checks
+      setResults({
+        text: data.text || "",
+        groundingChunks: data.groundingChunks || []
+      });
     } catch (err) {
       console.error(err);
       setError("Failed to perform search. Please try again later.");

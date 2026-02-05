@@ -229,19 +229,16 @@ export const searchLegalDocuments = async (docType: string, state: string) => {
   Provide clear descriptions and identify the most reliable sources. 
   Focus on state government websites (.gov) and official judicial resources.`;
 
-  // Explicitly use the Pro model to satisfy the user's intelligence requirements
   const response = await ai.models.generateContent({
     model: COMPLEX_MODEL, 
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
-      // Search results might benefit from thinking for complex syntheses if needed,
-      // but standard grounding usually handles the output.
     },
   });
 
   return {
-    text: response.text,
+    text: response.text || "",
     groundingChunks: response.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
   };
 };
@@ -295,7 +292,7 @@ export const convertSearchContextToForm = async (contextText: string, linkTitle:
   try {
     return JSON.parse(response.text || '{}');
   } catch (error) {
-    throw new Error("Could not structure form from search results.");
+    throw new Error("Could not structure form data correctly.");
   }
 };
 
