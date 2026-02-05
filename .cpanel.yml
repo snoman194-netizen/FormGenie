@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/creadevc/public_html/Forms2
+    - /bin/cp -R * $DEPLOYPATH
