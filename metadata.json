@@ -1,0 +1,8 @@
+{
+  "name": "formv3",
+  "description": "Convert CSV and PDF files into structured Google Forms using AI. Includes an intelligent chatbot assistant.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
