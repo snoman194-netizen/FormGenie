@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { FormStructure, QuestionType } from "../types";
+import { FormStructure, QuestionType } from "../types.ts";
 
 const COMPLEX_MODEL = 'gemini-3-pro-preview';
 const THINKING_BUDGET = 32768;

@@ -1,18 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sparkles, FormInput, FileJson, Info, LayoutGrid, MessageSquareQuote, Search, History as HistoryIcon, Home, LogOut } from 'lucide-react';
-import FileUploader from './components/FileUploader';
-import FormPreview from './components/FormPreview';
-import ChatBot from './components/ChatBot';
-import CodePreview from './components/CodePreview';
-import DataPreview from './components/DataPreview';
-import DocChat from './components/DocChat';
-import SearchTab from './components/SearchTab';
-import HistoryTab from './components/HistoryTab';
-import HomeTab from './components/HomeTab';
-import Onboarding from './components/Onboarding';
-import { convertFileToForm } from './services/gemini';
-import { FormStructure, SavedForm } from './types';
+import FileUploader from './components/FileUploader.tsx';
+import FormPreview from './components/FormPreview.tsx';
+import ChatBot from './components/ChatBot.tsx';
+import CodePreview from './components/CodePreview.tsx';
+import DataPreview from './components/DataPreview.tsx';
+import DocChat from './components/DocChat.tsx';
+import SearchTab from './components/SearchTab.tsx';
+import HistoryTab from './components/HistoryTab.tsx';
+import HomeTab from './components/HomeTab.tsx';
+import Onboarding from './components/Onboarding.tsx';
+import { convertFileToForm } from './services/gemini.ts';
+import { FormStructure, SavedForm } from './types.ts';
 
 const App: React.FC = () => {
   const [userName, setUserName] = useState<string | null>(null);
@@ -254,6 +254,10 @@ const App: React.FC = () => {
                       <div className="inline-flex items-center space-x-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
                         <Sparkles size={14} /> <span>Built for Professionals</span>
                       </div>
+                      <h1 className="text-5xl md:text-7xl font-black text-gray-900 leading-[1.1] tracking-tight">
+                        Convert data to <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Google Forms</span>
+                      </h1>
                       <h1 className="text-5xl md:text-7xl font-black text-gray-900 leading-[1.1] tracking-tight">
                         Convert data to <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Google Forms</span>
